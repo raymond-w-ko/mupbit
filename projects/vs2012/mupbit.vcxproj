@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\MUPBit.cpp" />
+    <ClCompile Include="..\..\RIPEMD160.cpp" />
     <ClCompile Include="..\..\SHA256.cpp" />
     <ClCompile Include="..\..\StableHeaders.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -19,6 +20,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\RIPEMD160.hpp" />
     <ClInclude Include="..\..\SHA256.hpp" />
     <ClInclude Include="..\..\StableHeaders.hpp" />
   </ItemGroup>
