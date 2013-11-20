@@ -87,9 +87,12 @@ void SHA256::hash(const uint8_t* data, uint64_t len) {
     processChunk(ptr);
     ptr += chunkSizeInBytes;
   }
+
+  this->createHashcodeBytes();
 }
 
 void SHA256::hash(const char* data, uint64_t len) {
+  assert(sizeof(char) == sizeof(uint8_t));
   this->hash(reinterpret_cast<const uint8_t*>(data), len);
 }
 
@@ -184,4 +187,22 @@ std::string SHA256::toString() {
   s += buf;
 
   return s;
+}
+
+static inline void integerToBytes(uint32_t n, uint8_t* bytes) {
+  bytes[0] = static_cast<uint8_t>((n & 0xFF000000) >> 24);
+  bytes[1] = static_cast<uint8_t>((n & 0x00FF0000) >> 16);
+  bytes[2] = static_cast<uint8_t>((n & 0x0000FF00) >>  8);
+  bytes[3] = static_cast<uint8_t>((n & 0x000000FF)      );
+}
+
+void SHA256::createHashcodeBytes() {
+  integerToBytes(h0, &hashcode[0]);
+  integerToBytes(h1, &hashcode[4]);
+  integerToBytes(h2, &hashcode[8]);
+  integerToBytes(h3, &hashcode[12]);
+  integerToBytes(h4, &hashcode[16]);
+  integerToBytes(h5, &hashcode[20]);
+  integerToBytes(h6, &hashcode[24]);
+  integerToBytes(h7, &hashcode[28]);
 }

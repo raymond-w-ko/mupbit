@@ -14,6 +14,8 @@ class SHA256 {
  private:
   void reset();
   void processChunk(const uint8_t* chunk);
+  void createHashcodeBytes();
 
   uint32_t h0, h1, h2, h3, h4, h5, h6, h7;
+  uint8_t hashcode[32];
 };
