@@ -16,7 +16,7 @@ static bool doSHA256Checks() {
   hasher.hash(std::string("The quick brown fox jumps over the lazy dog."));
   if (hasher.toString() != "ef537f25c895bfa782526529a9b63d97aa631564d5d789c2b765448c8635fb6c") return false;
 
-  // 1 chunk, > 448 bits
+  // 2 chunk, > 448 bits
   hasher.hash(std::string("Pneumonoultramicroscopicsilicovolcanoconiosis"));
   if (hasher.toString() != "0984363991e13bb6c2c6a9442d2ae50ec3b86843131fc02889f4ee2d1c8ca65c") return false;
 
