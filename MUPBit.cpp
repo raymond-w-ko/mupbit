@@ -1,6 +1,7 @@
 #include "StableHeaders.hpp"
 #include "SHA256.hpp"
 #include "RIPEMD160.hpp"
+#include "BigInt.hpp"
 
 static bool doSHA256Checks() {
   SHA256 hasher;
@@ -58,6 +59,13 @@ hasher.hash(std::string("1234567890123456789012345678901234567890123456789012345
   return true;
 }
 
+static bool doBigIntChecks() {
+  BigInt a;
+  BigInt b;
+
+  return true;
+}
+
 static bool doIntegrityChecks() {
   if (!doSHA256Checks()) {
     std::cerr << "The SHA256 hash algorithm is not working correctly!\n";
@@ -65,6 +73,11 @@ static bool doIntegrityChecks() {
   }
 
   if (!doRIPEMD160Checks()) {
+    std::cerr << "The RIPEMD160 hash algorithm is not working correctly!\n";
+    return false;
+  }
+
+  if (!doBigIntChecks()) {
     std::cerr << "The RIPEMD160 hash algorithm is not working correctly!\n";
     return false;
   }

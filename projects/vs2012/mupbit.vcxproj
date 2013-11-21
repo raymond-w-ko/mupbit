@@ -11,6 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\BigInt.cpp" />
     <ClCompile Include="..\..\MUPBit.cpp" />
     <ClCompile Include="..\..\RIPEMD160.cpp" />
     <ClCompile Include="..\..\SHA256.cpp" />
@@ -20,6 +21,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\BigInt.hpp" />
     <ClInclude Include="..\..\RIPEMD160.hpp" />
     <ClInclude Include="..\..\SHA256.hpp" />
     <ClInclude Include="..\..\StableHeaders.hpp" />

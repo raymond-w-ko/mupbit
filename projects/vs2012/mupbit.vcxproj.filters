@@ -27,6 +27,9 @@
     <ClCompile Include="..\..\RIPEMD160.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\BigInt.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\SHA256.hpp">
@@ -36,6 +39,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\RIPEMD160.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\BigInt.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
