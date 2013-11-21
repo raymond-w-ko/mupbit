@@ -60,8 +60,13 @@ hasher.hash(std::string("1234567890123456789012345678901234567890123456789012345
 }
 
 static bool doBigIntChecks() {
-  BigInt a;
-  BigInt b;
+  BigInt a = 0x89ABCDEF;
+  BigInt b = 0xFEDCBA98;
+
+  BigInt c = a + b + a + b;
+  std::cout << c.str() << "\n";
+
+  std::cout << (a - b).str() << "\n";
 
   return true;
 }
