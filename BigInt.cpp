@@ -169,7 +169,7 @@ BigInt BigInt::operator-(const BigInt& rhs) const {
   }
   assert(borrow == 0);
 
-  diff.sign *= operandSignFlip * magnitudeFlip;
+  diff.sign = operandSignFlip * magnitudeFlip;
   return diff;
 }
 
