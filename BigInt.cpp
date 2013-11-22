@@ -24,6 +24,67 @@ BigInt::BigInt(int i) {
   digits.push_back(n);
 }
 
+BigInt::BigInt(std::string s, int base) {
+  // TODO: implement other bases
+  assert(base == 16);
+
+  // empty string == 0
+  if (s.size() == 0) {
+    this->sign = 1;
+    this->digits.push_back(0);
+  }
+
+  size_t numCharsPerSmallBaseDigit = sizeof(SmallBaseInt) * 2;
+  size_t numWholeSmallBaseDigits = s.size() / numCharsPerSmallBaseDigit;
+
+  size_t index = s.size() - 1;
+
+  for (size_t i = 0; i < numWholeSmallBaseDigits; ++i) {
+    size_t end = index + 1;
+    size_t begin = end - numCharsPerSmallBaseDigit;
+    if (i == (numWholeSmallBaseDigits - 1) &&
+        (s[begin] == '-' || s[begin] == '+')) {
+      break;
+    }
+    std::string chunk(s.begin() + begin, s.begin() + end);
+    std::stringstream ss;
+    ss << std::hex << chunk;
+    SmallBaseInt n;
+    ss >> n;
+    this->digits.push_back(n);
+
+    index -= numCharsPerSmallBaseDigit;
+  }
+
+  static const size_t underflow = size_t(0) - size_t(1);
+
+  if (index == underflow) {
+    this->sign = 1;
+    return;
+  }
+
+  size_t begin = 0;
+  if (s[0] == '-') {
+    this->sign = -1;
+    begin = 1;
+  } else if (s[0] == '+') {
+    this->sign = 1;
+    begin = 1;
+  } else {
+    this->sign = 1;
+  }
+
+  if (begin < (index + 1)) {
+    size_t end = index + 1;
+    std::string finalChunk(s.begin() + begin, s.begin() + end);
+    std::stringstream ss;
+    ss << std::hex << finalChunk;
+    SmallBaseInt n;
+    ss >> n;
+    this->digits.push_back(n);
+  }
+}
+
 BigInt::BigInt(const BigInt& other) 
     : sign(other.sign),
       digits(other.digits) {
@@ -31,6 +92,32 @@ BigInt::BigInt(const BigInt& other)
 
 BigInt& BigInt::operator=(BigInt other) {
   other.swap(*this);
+  return *this;
+}
+
+BigInt& BigInt::operator=(unsigned int n) {
+  this->sign = 1;
+  this->digits.clear();
+  this->digits.push_back(n);
+
+  return *this;
+}
+
+BigInt& BigInt::operator=(int n) {
+  if (n >= 0) {
+    this->sign = 1;
+  } else {
+    this->sign = -1;
+  }
+  this->digits.clear();
+  this->digits.push_back(static_cast<SmallBaseInt>(n));
+
+  return *this;
+}
+
+BigInt& BigInt::operator=(std::string s) {
+  BigInt tmp(s, 16);
+  tmp.swap(*this);
   return *this;
 }
 
@@ -49,8 +136,6 @@ std::string BigInt::str(int base) {
   assert(base == 16);
 
   std::string s;
-  if (sign < 0)
-    s += "-";
 
   char buf[9];
   for (size_t i = 0; i < digits.size(); ++i) {
@@ -59,6 +144,18 @@ std::string BigInt::str(int base) {
     sprintf(buf, "%08x", n);
     s += buf;
   }
+
+  size_t trimAmount = 0;
+  while (trimAmount < (s.size() - 1) && s[trimAmount] == '0') {
+    trimAmount++;
+  }
+
+  s = std::string(s.begin() + trimAmount, s.end());
+  if (sign < 0)
+    s = "-" + s;
+#ifdef _DEBUG
+  _lastString = s;
+#endif
   return s;
 }
 
@@ -219,4 +316,9 @@ bool BigInt::operator>(const BigInt& rhs) const {
 bool BigInt::operator==(const BigInt& rhs) const {
   const BigInt& lhs = *this;
   return lhs.sign == rhs.sign && lhs.digits == rhs.digits;
+}
+
+BigInt BigInt::operator*(const BigInt& rhs) const {
+  BigInt product = 0;
+  return product;
 }
