@@ -26,6 +26,7 @@ class BigInt {
   bool operator<(const BigInt& rhs) const;
   bool operator>(const BigInt& rhs) const;
   bool operator==(const BigInt& rhs) const;
+  bool operator!=(const BigInt& rhs) const;
   bool operator<=(const BigInt& rhs) const;
 
   std::string str(int base = 16);
@@ -33,6 +34,10 @@ class BigInt {
  private:
   BigInt();
   void swap(BigInt& other);
+
+  static bool AbsDigitCompare(
+      const std::vector<SmallBaseInt>& lhs,
+      const std::vector<SmallBaseInt>& rhs);
 
   char sign;
   std::vector<SmallBaseInt> digits;

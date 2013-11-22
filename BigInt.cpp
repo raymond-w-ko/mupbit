@@ -18,6 +18,7 @@ BigInt::BigInt(int i) {
     sign = 1;
   } else {
     sign = -1;
+    i = -i;
   }
 
   unsigned int n = std::abs(i);
@@ -108,6 +109,7 @@ BigInt& BigInt::operator=(int n) {
     this->sign = 1;
   } else {
     this->sign = -1;
+    n = -n;
   }
   this->digits.clear();
   this->digits.push_back(static_cast<SmallBaseInt>(n));
@@ -161,7 +163,7 @@ std::string BigInt::str(int base) {
 
 BigInt BigInt::operator-() const {
   BigInt n(*this);
-  n.sign > 0 ? -1 : 1;
+  n.sign = n.sign > 0 ? -1 : 1;
   return n;
 }
 
@@ -241,18 +243,18 @@ BigInt BigInt::operator-(const BigInt& rhs) const {
     // (-123) - (-345) == (+345) - 123
     operandSignFlip = -1;
   }
-  assert(lhs.sign > 0 && rhs.sign > 0);
+  assert((lhs.sign > 0 && rhs.sign > 0) || (lhs.sign < 0 && rhs.sign < 0));
 
   BigInt diff;
 
-  bool cmp = lhs <= rhs;
+  bool absLesser = AbsDigitCompare(lhs.digits, rhs.digits);
 
   const std::vector<SmallBaseInt>& bigger =
-      cmp ? rhs.digits : lhs.digits;
+      absLesser ? rhs.digits : lhs.digits;
   const std::vector<SmallBaseInt>& smaller =
-      cmp ? lhs.digits : rhs.digits;
+      absLesser ? lhs.digits : rhs.digits;
 
-  char magnitudeFlip = cmp ? -1 : 1;
+  char magnitudeFlip = absLesser ? -1 : 1;
 
   size_t borrow = 0;
   for (size_t i = 0; i < bigger.size(); ++i) {
@@ -286,17 +288,24 @@ bool BigInt::operator<(const BigInt& rhs) const {
   }
 
   assert(lhs.sign == rhs.sign);
-  assert(lhs.digits.size() == rhs.digits.size());
 
-  for (size_t i = 0; i < lhs.digits.size(); ++i) {
-    size_t index = lhs.digits.size() - i - 1;
-    SmallBaseInt m = lhs.digits[index];
-    SmallBaseInt n = rhs.digits[index];
+  bool absLess = AbsDigitCompare(lhs.digits, rhs.digits);
+  return lhs.sign > 0 ? absLess : !absLess;
+}
+
+bool BigInt::AbsDigitCompare(
+    const std::vector<SmallBaseInt>& lhs,
+    const std::vector<SmallBaseInt>& rhs) {
+  assert(lhs.size() == rhs.size());
+  for (size_t i = 0; i < lhs.size(); ++i) {
+    size_t index = lhs.size() - i - 1;
+    SmallBaseInt m = lhs[index];
+    SmallBaseInt n = rhs[index];
 
     if (m < n) {
-      return lhs.sign > 0 ? true : false;
+      return true;
     } else if (m > n ) {
-      return lhs.sign > 0 ? false : true;
+      return false;
     }
   }
 
@@ -317,6 +326,12 @@ bool BigInt::operator==(const BigInt& rhs) const {
   const BigInt& lhs = *this;
   return lhs.sign == rhs.sign && lhs.digits == rhs.digits;
 }
+
+bool BigInt::operator!=(const BigInt& rhs) const {
+  const BigInt& lhs = *this;
+  return !(lhs == rhs);
+}
+
 
 BigInt BigInt::operator*(const BigInt& rhs) const {
   BigInt product = 0;
