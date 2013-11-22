@@ -120,6 +120,12 @@ static bool doBigIntChecks() {
   c = -468;
   if ((a + b) != c) INTEGRITY_ERROR;
 
+  a = "876543218765432187654321";
+  b = "12341234";
+  c = "876543218765432199995555";
+  if ((a + b) != c) INTEGRITY_ERROR;
+  if ((b + a) != c) INTEGRITY_ERROR;
+
   a = 123;
   b = -345;
   c = 468;
