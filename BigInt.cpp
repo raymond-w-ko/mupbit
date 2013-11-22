@@ -137,13 +137,17 @@ std::string BigInt::str(int base) {
   // TODO: implement other bases
   assert(base == 16);
 
+  std::stringstream ss;
+  ss << "%0" << (sizeof(SmallBaseInt) * 2) << "x";
+  std::string formatSpecifier = ss.str();
+
   std::string s;
 
   char buf[9];
   for (size_t i = 0; i < digits.size(); ++i) {
     size_t index = digits.size() - i - 1;
     SmallBaseInt n = digits[index];
-    sprintf(buf, "%08x", n);
+    sprintf(buf, formatSpecifier.c_str(), n);
     s += buf;
   }
 
@@ -334,6 +338,50 @@ bool BigInt::operator!=(const BigInt& rhs) const {
 
 
 BigInt BigInt::operator*(const BigInt& rhs) const {
+  const BigInt& lhs = *this;
+
+  // Handbook of Applied Cryptography Algorithm 14.12
   BigInt product = 0;
+  const std::vector<SmallBaseInt>& x = lhs.digits;
+  const std::vector<SmallBaseInt>& y = rhs.digits;
+  std::vector<SmallBaseInt>& w = product.digits;
+
+  size_t n = lhs.digits.size() - 1;
+  size_t t = rhs.digits.size() - 1;
+
+  w.resize((n + t + 1) + 1, 0x0);
+
+  for (size_t i = 0; i <= t; ++i ) {
+    SmallBaseInt c = 0;
+    SmallBaseInt u = 0;
+    for (size_t j = 0; j <= n; ++j) {
+      BigBaseInt sum = 0;
+      BigBaseInt w_i_plus_j = w[i + j];
+      BigBaseInt x_j_mul_y_i =
+          static_cast<BigBaseInt>(x[j]) *
+          static_cast<BigBaseInt>(y[i]);
+      sum = w_i_plus_j + x_j_mul_y_i + c;
+      u = static_cast<SmallBaseInt>(sum >> (sizeof(SmallBaseInt) * 8));
+      SmallBaseInt v = static_cast<SmallBaseInt>(sum);
+
+      w[i + j] = v;
+      c = u;
+    }
+
+    w[i + n + 1] = u;
+  }
+
+  product.sign = lhs.sign * rhs.sign;
+
+  // trim leading zero digits
+  size_t numZerosToRemove = 0;
+  for (size_t i = (product.digits.size() -1); i > 0; --i) {
+    if (w[i] == 0) {
+      numZerosToRemove++;
+    } else {
+      break;
+    }
+  }
+  product.digits.resize(product.digits.size() - numZerosToRemove);
   return product;
 }
