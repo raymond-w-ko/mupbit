@@ -1,6 +1,11 @@
 #include "StableHeaders.hpp"
 #include "BigInt.hpp"
 
+const BigInt BigInt::ZERO = BigInt(0);
+const BigInt BigInt::ONE = BigInt(1);
+const BigInt BigInt::BASE =
+  BigInt(2) ^ BigInt(static_cast<uint32_t>(sizeof(SmallBaseInt)) * 8);
+
 BigInt::~BigInt() {
 }
 
@@ -8,21 +13,44 @@ BigInt::BigInt()
     : sign(1) {
 }
 
-BigInt::BigInt(unsigned int n) 
+BigInt::BigInt(uint32_t n) 
     : sign(1) {
   digits.push_back(n);
 }
 
-BigInt::BigInt(int i) {
-  if (i >= 0) {
+BigInt::BigInt(int32_t n) {
+  if (n >= 0) {
     sign = 1;
   } else {
     sign = -1;
-    i = -i;
+    n = -n;
   }
 
-  unsigned int n = std::abs(i);
   digits.push_back(n);
+}
+
+BigInt::BigInt(uint64_t n)
+    : sign(1) {
+  digits.push_back(static_cast<uint32_t>(n));
+  uint32_t upper = static_cast<uint32_t>(n >> 32);
+  if (upper > 0) {
+    digits.push_back(upper);
+  }
+}
+
+BigInt::BigInt(int64_t n) {
+  if (n >= 0) {
+    sign = 1;
+  } else {
+    sign = -1;
+    n = -n;
+  }
+
+  digits.push_back(static_cast<uint32_t>(n));
+  uint32_t upper = static_cast<uint32_t>(n >> 32);
+  if (upper > 0) {
+    digits.push_back(upper);
+  }
 }
 
 BigInt::BigInt(std::string s, int base) {
@@ -96,24 +124,27 @@ BigInt& BigInt::operator=(BigInt other) {
   return *this;
 }
 
-BigInt& BigInt::operator=(unsigned int n) {
-  this->sign = 1;
-  this->digits.clear();
-  this->digits.push_back(n);
-
+BigInt& BigInt::operator=(uint32_t n) {
+  BigInt tmp(n);
+  tmp.swap(*this);
   return *this;
 }
 
-BigInt& BigInt::operator=(int n) {
-  if (n >= 0) {
-    this->sign = 1;
-  } else {
-    this->sign = -1;
-    n = -n;
-  }
-  this->digits.clear();
-  this->digits.push_back(static_cast<SmallBaseInt>(n));
+BigInt& BigInt::operator=(int32_t n) {
+  BigInt tmp(n);
+  tmp.swap(*this);
+  return *this;
+}
 
+BigInt& BigInt::operator=(uint64_t n) {
+  BigInt tmp(n);
+  tmp.swap(*this);
+  return *this;
+}
+
+BigInt& BigInt::operator=(int64_t n) {
+  BigInt tmp(n);
+  tmp.swap(*this);
   return *this;
 }
 
@@ -251,7 +282,13 @@ BigInt BigInt::operator-(const BigInt& rhs) const {
 
   BigInt diff;
 
-  bool absLesser = AbsDigitCompare(lhs.digits, rhs.digits);
+  bool absLesser;
+  if (lhs.digits.size() == rhs.digits.size()) {
+    absLesser = AbsDigitCompare(lhs.digits, rhs.digits);
+  } else {
+    absLesser = lhs.digits.size() < rhs.digits.size();
+  }
+
 
   const std::vector<SmallBaseInt>& bigger =
       absLesser ? rhs.digits : lhs.digits;
@@ -262,13 +299,14 @@ BigInt BigInt::operator-(const BigInt& rhs) const {
 
   size_t borrow = 0;
   for (size_t i = 0; i < bigger.size(); ++i) {
+    SmallBaseInt smallerDigit = i < smaller.size() ? smaller[i] : 0;
     BigBaseInt wideDigitDiff =
         static_cast<BigBaseInt>(bigger[i]) -
-        static_cast<BigBaseInt>(smaller[i]) -
+        static_cast<BigBaseInt>(smallerDigit) -
         static_cast<BigBaseInt>(borrow);
     SmallBaseInt digitDiff = static_cast<SmallBaseInt>(wideDigitDiff);
     diff.digits.push_back(digitDiff);
-    borrow = ((borrow >> 32) > 0 ? 1 : 0);
+    borrow = ((wideDigitDiff >> 32) > 0 ? 1 : 0);
   }
   assert(borrow == 0);
 
@@ -323,7 +361,12 @@ bool BigInt::operator<=(const BigInt& rhs) const {
 }
 
 bool BigInt::operator>(const BigInt& rhs) const {
-  return !(rhs < *this);
+  return !(*this < rhs);
+}
+
+bool BigInt::operator>=(const BigInt& rhs) const {
+  const BigInt& lhs = *this;
+  return lhs > rhs || lhs == rhs;
 }
 
 bool BigInt::operator==(const BigInt& rhs) const {
@@ -374,14 +417,198 @@ BigInt BigInt::operator*(const BigInt& rhs) const {
   product.sign = lhs.sign * rhs.sign;
 
   // trim leading zero digits
+  product.trimLeadingZeros();
+  return product;
+}
+
+std::pair<BigInt, BigInt> BigInt::operator/(const BigInt& rhs) const {
+  if (rhs == ZERO) {
+    throw std::overflow_error("division by zero exception");
+  }
+
+  // Handbook of Applied Cryptography Algorithm 14.20
+
+  // we have to apply a normalization multiplier to ensure that the most
+  // significant bit of y is 1, or this algorithm basically never terminates.
+  SmallBaseInt lastDigit = rhs[rhs.digits.size() - 1];
+  BigInt normalizationShift = 0;
+  while ((lastDigit >> (sizeof(SmallBaseInt) * 8 -1)) == 0) {
+    lastDigit <<= 1;
+    normalizationShift = normalizationShift + 1;
+  }
+
+  BigInt x = *this << normalizationShift;
+  const BigInt& y = rhs << normalizationShift;
+  size_t n = x.digits.size() - 1;
+  size_t t = y.digits.size() - 1;
+
+  assert(n >= t && t >= 1);
+
+  BigInt quot;
+  //BigInt rem;
+  std::vector<SmallBaseInt>& q = quot.digits;
+  //std::vector<SmallBaseInt>& r = rem.digits;
+  q.resize(n - t + 1, 0);
+  //r.resize(t + 1);
+
+  BigInt ybnt = y * (BigInt::BASE ^ (BigInt(n) - BigInt(t)));
+  while (x >= ybnt) {
+    q[n - t]++;
+    x = x - ybnt;
+  }
+
+  BigInt l2 = ((BigInt(y[t]) * BigInt::BASE) + BigInt(y[t - 1]));
+  for (size_t i = n; i >= (t + 1); --i) {
+    if (x[i] == y[t]) {
+      q[i - t - 1] = SmallBaseInt(0) - SmallBaseInt(1);
+    } else {
+      BigBaseInt floored = x[i] * BigInt::BASE.uint64();
+      floored += x[i - 1];
+      floored /= y[t];
+      q[i - t - 1] = static_cast<SmallBaseInt>(floored);
+    }
+
+    BigInt r =
+        (BigInt(x[i - 0]) * (BigInt::BASE ^ 2)) + 
+        (BigInt(x[i - 1]) *  BigInt::BASE) + 
+        (BigInt(x[i - 2]));
+    for (;;) {
+      BigInt l = BigInt(q[i - t - 1]) * l2;
+      if (l <= r) {
+        break;
+      }
+      
+      q[i - t - 1]--;
+    }
+
+    BigInt ybit1 = y * (BigInt::BASE ^ BigInt(i - t - 1));
+    x = x - (BigInt(q[i - t - 1]) * ybit1);
+
+    if (x.sign < 0) {
+      x = x + ybit1;
+      q[i - t - 1]--;
+    }
+  }
+
+  //rem = x;
+
+  quot.sign = x.sign * y.sign;
+  x.sign = quot.sign;
+
+  quot.trimLeadingZeros();
+  x.trimLeadingZeros();
+  // remove normalization multiplier
+  x = x >> normalizationShift;
+  x.trimLeadingZeros();
+
+  return std::make_pair(quot, x);
+}
+
+BigInt BigInt::operator^(const BigInt& rhs) const {
+  const BigInt& lhs = *this;
+
+  // x ^ 0 == 1 always
+  if (rhs == ZERO) {
+    return ONE;
+  }
+
+  BigInt n = BigInt(1);
+
+  for (BigInt i = BigInt(0); i < rhs; i = i + 1) {
+    n = n * lhs;
+  }
+
+  return n;
+}
+
+uint64_t BigInt::uint64() const {
+  uint64_t n = 0;
+  n = digits[0];
+  uint64_t upper = 0;
+  if (digits.size() >= 2) {
+    upper = digits[1];
+    upper <<= sizeof(SmallBaseInt) * 8;
+  }
+  n += upper;
+  return n;
+}
+
+const BigInt::SmallBaseInt& BigInt::operator[](size_t index) const {
+  return digits[index];
+}
+
+void BigInt::trimLeadingZeros() {
   size_t numZerosToRemove = 0;
-  for (size_t i = (product.digits.size() -1); i > 0; --i) {
-    if (w[i] == 0) {
+  for (size_t i = (digits.size() -1); i > 0; --i) {
+    if (digits[i] == 0) {
       numZerosToRemove++;
     } else {
       break;
     }
   }
-  product.digits.resize(product.digits.size() - numZerosToRemove);
-  return product;
+  digits.resize(digits.size() - numZerosToRemove);
+}
+
+BigInt BigInt::operator<<(const BigInt& rhs) const {
+  static const SmallBaseInt baseInBits = sizeof(SmallBaseInt) * 8;
+
+  BigInt shifted;
+  BigInt bigShiftsRem = rhs;
+  for (; bigShiftsRem >= 32; bigShiftsRem = bigShiftsRem - 32) {
+    shifted.digits.push_back(0);
+  }
+  assert(bigShiftsRem.digits.size() == 1);
+  SmallBaseInt shiftsRem = bigShiftsRem[0];
+  assert(shiftsRem < baseInBits);
+
+  const BigInt& n = *this;
+
+  SmallBaseInt overflow = 0;
+  for (size_t i = 0; i < n.digits.size(); ++i) {
+    SmallBaseInt newDigit = n[i] << shiftsRem;
+    newDigit |= overflow;
+    overflow = n[i] >> (baseInBits - shiftsRem);
+    shifted.digits.push_back(newDigit);
+  }
+  if (overflow > 0) {
+    shifted.digits.push_back(overflow);
+  }
+
+  shifted.sign = n.sign;
+  return shifted;
+}
+
+BigInt BigInt::operator>>(const BigInt& rhs) const {
+  static const SmallBaseInt baseInBits = sizeof(SmallBaseInt) * 8;
+
+  BigInt shifted;
+
+  size_t digitsDropped = 0;
+  BigInt bigShiftsRem = rhs;
+  for (; bigShiftsRem >= 32; bigShiftsRem = bigShiftsRem - 32) {
+    digitsDropped++;
+  }
+  assert(bigShiftsRem.digits.size() == 1);
+  SmallBaseInt shiftsRem = bigShiftsRem[0];
+  assert(shiftsRem < baseInBits);
+
+  const BigInt& n = *this;
+
+  for (size_t i = digitsDropped; i < n.digits.size(); ++i) {
+    SmallBaseInt digit = n[i] >> shiftsRem;
+    SmallBaseInt borrowed = 0;
+    if (i < (n.digits.size() - 1)) {
+      borrowed = n[i + 1] << (baseInBits - shiftsRem);
+    }
+    digit |= borrowed;
+    shifted.digits.push_back(digit);
+  }
+
+  // shifted too far, nothing left
+  if (shifted.digits.size() == 0) {
+    shifted.digits.push_back(0);
+  }
+
+  shifted.sign = n.sign;
+  return shifted;
 }

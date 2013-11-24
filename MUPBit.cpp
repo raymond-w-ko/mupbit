@@ -148,9 +148,39 @@ static bool doBigIntChecks() {
   c = 256;
   if ((a * b) != c) INTEGRITY_ERROR;
 
+  a = "123412341234123412341234123412341234";
+  b = "1234123412341234000000000000000000000000";
+  c = "-1233ffffffffffffedcbedcbedcbedcbedcbedcc";
+  if ((a - b) != c) INTEGRITY_ERROR;
+
   a = "0479be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8";
   c = "1407d8be78249cd888f879013ad89d61b056e492ef173394d08a50a202635bc21ec11e40557bb9e35f5a9a0849c78ee8badaef6f710f44dda54e03094e29715c1a67053cad5f3bd952bccfafce1e187df36ad35d1c70fcd7df6a337b6772d2bfd9c372d1541278bdcbe4f80e3d9e8b333f432bee128fd65b7c0ac2a7cc17c14440";
   if ((a * a) != c) INTEGRITY_ERROR;
+  if ((c / a).first != a) INTEGRITY_ERROR;
+
+  //std::pair<BigInt, BigInt> qr = a / b;
+  
+  a = 42;
+  b = 0;
+  if ((a ^ b) != BigInt::ONE) INTEGRITY_ERROR;
+
+  a = 42;
+  b = 1;
+  if ((a ^ b) != a) INTEGRITY_ERROR;
+
+  a = 42;
+  b = 42;
+  c = "5919417cd6a11dbdf2f413657bbc03bc842ac76ef3932640000000000";
+  if ((a ^ b) != c) INTEGRITY_ERROR;
+  if ((c * BigInt::ZERO) != BigInt::ZERO) INTEGRITY_ERROR;
+
+  a = "123412341234123412341234123412341234";
+  b = "1234123412341234";
+  c = "100000000000000010000";
+  auto qr = a / b;
+  if (qr.first != c) INTEGRITY_ERROR;
+  c = "1234";
+  if (qr.second != c) INTEGRITY_ERROR;
 
   return true;
 }
