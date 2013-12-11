@@ -2,6 +2,7 @@
 #include "SHA256.hpp"
 #include "RIPEMD160.hpp"
 #include "BigInt.hpp"
+#include "ECDSA.hpp"
 
 #ifdef _DEBUG
 #  define INTEGRITY_ERROR { assert(false); return false; }
@@ -185,6 +186,15 @@ static bool doBigIntChecks() {
   return true;
 }
 
+static bool doECDSAChecks() {
+  Point G;
+  G.x = ECDSA::Gx;
+  G.y = ECDSA::Gy;
+
+  Point p = ECDSA::Double(G);
+  return true;
+}
+
 static bool doIntegrityChecks() {
   if (!doSHA256Checks()) {
     std::cerr << "The SHA256 hash algorithm is not working correctly!\n";
@@ -197,9 +207,15 @@ static bool doIntegrityChecks() {
   }
 
   if (!doBigIntChecks()) {
-    std::cerr << "The big integer implementation is not working correctly\n";
+    std::cerr << "The big integer implementation is not working correctly!\n";
     return false;
   }
+
+  if (!doECDSAChecks()) {
+    std::cerr << "The ECDSA implementation is not working correctly!\n";
+    return false;
+  }
+
 
   return true;
 }

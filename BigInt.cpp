@@ -164,7 +164,7 @@ void BigInt::swap(BigInt& other) {
   std::swap(this->digits, other.digits);
 }
 
-std::string BigInt::str(int base) {
+std::string BigInt::str(int base) const {
   // TODO: implement other bases
   assert(base == 16);
 
@@ -432,7 +432,7 @@ std::pair<BigInt, BigInt> BigInt::operator/(const BigInt& rhs) const {
   // significant bit of y is 1, or this algorithm basically never terminates.
   SmallBaseInt lastDigit = rhs[rhs.digits.size() - 1];
   BigInt normalizationShift = 0;
-  while ((lastDigit >> (sizeof(SmallBaseInt) * 8 -1)) == 0) {
+  while ((lastDigit >> (sizeof(SmallBaseInt) * 8 - 1)) == 0) {
     lastDigit <<= 1;
     normalizationShift = normalizationShift + 1;
   }
@@ -552,6 +552,12 @@ void BigInt::trimLeadingZeros() {
 BigInt BigInt::operator<<(const BigInt& rhs) const {
   static const SmallBaseInt baseInBits = sizeof(SmallBaseInt) * 8;
 
+  assert(rhs > BigInt::ZERO);
+
+  if (rhs == BigInt::ZERO) {
+    return *this;
+  }
+
   BigInt shifted;
   BigInt bigShiftsRem = rhs;
   for (; bigShiftsRem >= 32; bigShiftsRem = bigShiftsRem - 32) {
@@ -580,6 +586,12 @@ BigInt BigInt::operator<<(const BigInt& rhs) const {
 
 BigInt BigInt::operator>>(const BigInt& rhs) const {
   static const SmallBaseInt baseInBits = sizeof(SmallBaseInt) * 8;
+
+  assert(rhs > BigInt::ZERO);
+
+  if (rhs == BigInt::ZERO) {
+    return *this;
+  }
 
   BigInt shifted;
 

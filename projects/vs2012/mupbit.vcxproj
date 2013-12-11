@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\BigInt.cpp" />
+    <ClCompile Include="..\..\ECDSA.cpp" />
     <ClCompile Include="..\..\MUPBit.cpp" />
     <ClCompile Include="..\..\RIPEMD160.cpp" />
     <ClCompile Include="..\..\SHA256.cpp" />
@@ -32,6 +33,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\BigInt.hpp" />
+    <ClInclude Include="..\..\ECDSA.hpp" />
     <ClInclude Include="..\..\RIPEMD160.hpp" />
     <ClInclude Include="..\..\SHA256.hpp" />
     <ClInclude Include="..\..\StableHeaders.hpp" />

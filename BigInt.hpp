@@ -43,7 +43,7 @@ class BigInt {
 
   const SmallBaseInt& operator[](size_t index) const;
 
-  std::string str(int base = 16);
+  std::string str(int base = 16) const;
   uint64_t uint64() const;
 
   static const BigInt ZERO;
@@ -63,6 +63,6 @@ class BigInt {
   std::vector<SmallBaseInt> digits;
 
 #ifdef _DEBUG
-  std::string _lastString;
+  mutable std::string _lastString;
 #endif
 };
