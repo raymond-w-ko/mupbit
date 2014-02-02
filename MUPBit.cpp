@@ -191,7 +191,9 @@ static bool doECDSAChecks() {
   G.x = ECDSA::Gx;
   G.y = ECDSA::Gy;
 
-  Point p = ECDSA::Double(G);
+  Point p;
+  p = ECDSA::Double(G);
+  p = ECDSA::Add(G, p);
   return true;
 }
 

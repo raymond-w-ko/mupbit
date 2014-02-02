@@ -17,8 +17,9 @@ const BigInt ECDSA::Gy(
     "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8");
 
 BigInt ECDSA::ModP(BigInt num) {
-  while (num < BigInt::ZERO) {
-    num = num + ECDSA::p;
+  if (num < BigInt::ZERO) {
+    auto qr = num / ECDSA::p;
+    num = qr.second + ECDSA::p;
   }
 
   if (num > ECDSA::p) {
@@ -41,13 +42,13 @@ BigInt ECDSA::Inverse(BigInt num) {
     auto qr = r / newr;
     BigInt quotient = qr.first;
 
-    tmp = newt;
-    newt = t - (quotient * newt);
-    t = tmp;
-
     tmp = newr;
     newr = r - (quotient * newr);
     r = tmp;
+
+    tmp = newt;
+    newt = t - (quotient * newt);
+    t = tmp;
   }
 
   assert(r <= BigInt::ONE);
@@ -57,8 +58,23 @@ BigInt ECDSA::Inverse(BigInt num) {
   return t;
 }
 
-Point ECDSA::Add(Point P, Point q) {
+Point ECDSA::Add(Point P, Point Q) {
   Point r;
+
+  BigInt numerator = Q.y - P.y;
+  numerator = ModP(numerator);
+
+  BigInt denominator = Q.x - P.x;
+  denominator = ModP(denominator);
+
+  BigInt lambda = numerator * Inverse(denominator);
+  lambda = ModP(lambda);
+
+  r.x = (lambda ^ BigInt(2)) - P.x - Q.x;
+  r.x = ModP(r.x);
+
+  r.y = (lambda * (P.x - r.x)) - P.y;
+  r.y = ModP(r.y);
 
   return r;
 }
@@ -66,7 +82,7 @@ Point ECDSA::Add(Point P, Point q) {
 Point ECDSA::Double(Point P) {
   Point r;
 
-  BigInt numerator = BigInt(3) * (P.x ^ 2);
+  BigInt numerator = BigInt(3) * (P.x ^ 2) + a;
   numerator = ModP(numerator);
 
   BigInt denominator = BigInt(2) * P.y;
