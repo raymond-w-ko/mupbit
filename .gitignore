@@ -11,3 +11,13 @@
 *.lai
 *.la
 *.a
+
+/projects/vs2012/Debug
+/projects/vs2012/Release
+/projects/vs2012/x64
+/projects/vs2012/*.suo
+
+/projects/vs2013/Debug
+/projects/vs2013/Release
+/projects/vs2013/x64
+/projects/vs2013/*.suo
