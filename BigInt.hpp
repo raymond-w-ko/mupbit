@@ -3,6 +3,7 @@
 class BigInt {
   typedef uint32_t SmallBaseInt;
   typedef uint64_t BigBaseInt;
+  typedef int64_t SignedBigBaseInt;
 
  public:
   BigInt(uint32_t n);
@@ -42,6 +43,7 @@ class BigInt {
   bool operator>=(const BigInt& rhs) const;
 
   const SmallBaseInt& operator[](size_t index) const;
+  const SmallBaseInt& safe_at(SignedBigBaseInt index) const;
 
   std::string str(int base = 16) const;
   uint64_t uint64() const;
@@ -58,8 +60,9 @@ class BigInt {
   BigInt();
   void swap(BigInt& other);
   void trimLeadingZeros();
+  void padWithLeadingZeros(size_t num_digits);
 
-  char sign;
+  signed int sign;
   std::vector<SmallBaseInt> digits;
 
 #ifdef _DEBUG

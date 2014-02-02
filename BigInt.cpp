@@ -13,7 +13,7 @@ BigInt::BigInt()
     : sign(1) {
 }
 
-BigInt::BigInt(uint32_t n) 
+BigInt::BigInt(uint32_t n)
     : sign(1) {
   digits.push_back(n);
 }
@@ -114,7 +114,7 @@ BigInt::BigInt(std::string s, int base) {
   }
 }
 
-BigInt::BigInt(const BigInt& other) 
+BigInt::BigInt(const BigInt& other)
     : sign(other.sign),
       digits(other.digits) {
 }
@@ -311,6 +311,9 @@ BigInt BigInt::operator-(const BigInt& rhs) const {
   assert(borrow == 0);
 
   diff.sign = operandSignFlip * magnitudeFlip;
+
+  diff.trimLeadingZeros();
+
   return diff;
 }
 
@@ -318,9 +321,9 @@ bool BigInt::operator<(const BigInt& rhs) const {
   const BigInt& lhs = *this;
 
   if (lhs.sign > rhs.sign) {
-    return true;
-  } else if (lhs.sign < rhs.sign) {
     return false;
+  } else if (lhs.sign < rhs.sign) {
+    return true;
   }
 
   if (lhs.digits.size() < rhs.digits.size()) {
@@ -431,6 +434,7 @@ std::pair<BigInt, BigInt> BigInt::operator/(const BigInt& rhs) const {
   // we have to apply a normalization multiplier to ensure that the most
   // significant bit of y is 1, or this algorithm basically never terminates.
   SmallBaseInt lastDigit = rhs[rhs.digits.size() - 1];
+  assert(lastDigit != 0);
   BigInt normalizationShift = 0;
   while ((lastDigit >> (sizeof(SmallBaseInt) * 8 - 1)) == 0) {
     lastDigit <<= 1;
@@ -438,16 +442,24 @@ std::pair<BigInt, BigInt> BigInt::operator/(const BigInt& rhs) const {
   }
 
   BigInt x = *this << normalizationShift;
-  const BigInt& y = rhs << normalizationShift;
-  size_t n = x.digits.size() - 1;
-  size_t t = y.digits.size() - 1;
+  x.sign = 1;
+  BigInt _y = rhs << normalizationShift;
+  _y.sign = 1;
+  const BigInt& y = _y;
+  SignedBigBaseInt n = static_cast<SignedBigBaseInt>(x.digits.size()) - 1;
+  SignedBigBaseInt t = static_cast<SignedBigBaseInt>(y.digits.size()) - 1;
 
-  assert(n >= t && t >= 1);
+  assert(x > BigInt::ZERO);
+  assert(y > BigInt::ZERO);
+
+  assert(y.digits.size() > 0 && y.digits[y.digits.size() - 1] != 0);
+  assert(n >= t && t >= 0);
 
   BigInt quot;
   //BigInt rem;
   std::vector<SmallBaseInt>& q = quot.digits;
   //std::vector<SmallBaseInt>& r = rem.digits;
+  assert((n - t + 1) >= 0);
   q.resize(n - t + 1, 0);
   //r.resize(t + 1);
 
@@ -457,32 +469,36 @@ std::pair<BigInt, BigInt> BigInt::operator/(const BigInt& rhs) const {
     x = x - ybnt;
   }
 
-  BigInt l2 = ((BigInt(y[t]) * BigInt::BASE) + BigInt(y[t - 1]));
-  for (size_t i = n; i >= (t + 1); --i) {
-    if (x[i] == y[t]) {
+  BigInt l2 = (BigInt(y.safe_at(t)) * BigInt::BASE) + BigInt(y.safe_at(t - 1));
+  for (SignedBigBaseInt i = n; i >= (t + 1); --i) {
+    if (x.safe_at(i) == y.safe_at(t)) {
       q[i - t - 1] = SmallBaseInt(0) - SmallBaseInt(1);
     } else {
-      BigBaseInt floored = x[i] * BigInt::BASE.uint64();
-      floored += x[i - 1];
-      floored /= y[t];
+      BigBaseInt floored = x.safe_at(i) * BigInt::BASE.uint64();
+      floored += x.safe_at(i - 1);
+      floored /= y.safe_at(t);
       q[i - t - 1] = static_cast<SmallBaseInt>(floored);
     }
 
     BigInt r =
-        (BigInt(x[i - 0]) * (BigInt::BASE ^ 2)) + 
-        (BigInt(x[i - 1]) *  BigInt::BASE) + 
-        (BigInt(x[i - 2]));
+        (BigInt(x.safe_at(i - 0)) * (BigInt::BASE ^ 2)) +
+        (BigInt(x.safe_at(i - 1)) *  BigInt::BASE) +
+        (BigInt(x.safe_at(i - 2)));
     for (;;) {
       BigInt l = BigInt(q[i - t - 1]) * l2;
       if (l <= r) {
         break;
       }
-      
+
       q[i - t - 1]--;
     }
 
     BigInt ybit1 = y * (BigInt::BASE ^ BigInt(i - t - 1));
+    // assumes that the number of digits remains constant, so we have to
+    // recompensate for operator-() trimming leading zeros
+    const size_t num_digits = x.digits.size();
     x = x - (BigInt(q[i - t - 1]) * ybit1);
+    x.padWithLeadingZeros(num_digits);
 
     if (x.sign < 0) {
       x = x + ybit1;
@@ -492,7 +508,7 @@ std::pair<BigInt, BigInt> BigInt::operator/(const BigInt& rhs) const {
 
   //rem = x;
 
-  quot.sign = x.sign * y.sign;
+  quot.sign = this->sign * rhs.sign;
   x.sign = quot.sign;
 
   quot.trimLeadingZeros();
@@ -537,9 +553,16 @@ const BigInt::SmallBaseInt& BigInt::operator[](size_t index) const {
   return digits[index];
 }
 
+const BigInt::SmallBaseInt& BigInt::safe_at(SignedBigBaseInt index) const {
+  if (index < 0) {
+    index = 0;
+  }
+  return digits[index];
+}
+
 void BigInt::trimLeadingZeros() {
   size_t numZerosToRemove = 0;
-  for (size_t i = (digits.size() -1); i > 0; --i) {
+  for (size_t i = (digits.size() - 1); i > 0; --i) {
     if (digits[i] == 0) {
       numZerosToRemove++;
     } else {
@@ -547,6 +570,12 @@ void BigInt::trimLeadingZeros() {
     }
   }
   digits.resize(digits.size() - numZerosToRemove);
+}
+
+void BigInt::padWithLeadingZeros(size_t num_digits) {
+  if (digits.size() < num_digits) {
+    digits.resize(num_digits, 0);
+  }
 }
 
 BigInt BigInt::operator<<(const BigInt& rhs) const {
